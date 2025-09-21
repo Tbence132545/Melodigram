@@ -1,59 +1,25 @@
 package com.Tbence132545.Melodigram.controller;
 
-import com.Tbence132545.Melodigram.model.MidiFileService;
+import com.Tbence132545.Melodigram.model.HandAssignmentService; // Correct
 import com.Tbence132545.Melodigram.model.MidiInputReceiver;
 import com.Tbence132545.Melodigram.model.MidiPlayer;
 import com.Tbence132545.Melodigram.view.AnimationPanel;
 import com.Tbence132545.Melodigram.view.ListWindow;
 import com.Tbence132545.Melodigram.view.PianoWindow;
 import com.Tbence132545.Melodigram.view.SeekBar;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import javax.sound.midi.*;
 import javax.swing.*;
 import javax.swing.Timer;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class PlaybackController {
 
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-    private static class HandAssignmentFile {
-        String midiHash;
-        List<AnimationPanel.HandAssignment> assignments;
-    }
+    private final HandAssignmentService assignmentService;
 
     private static final int TARGET_FPS = 60;
     private static final int TIMER_DELAY_MS = 1000 / TARGET_FPS;
-    private static final long STARTUP_DELAY_MS = 3000; //This is used to delay the start of the animation upon loading the pianoWindow- I found it was neccessary to not have any delays between animation and sound
-    private static final Path ASSIGNMENTS_DIR;
-
-    static {
-        ASSIGNMENTS_DIR = getStandardApplicationDataDirectory().resolve("assignments");
-    }
-
-    private static Path getStandardApplicationDataDirectory() {
-        String appName = "Melodigram";
-        String os = System.getProperty("os.name").toLowerCase();
-        Path baseDir;
-        if (os.contains("win")) {
-            baseDir = Paths.get(System.getenv("APPDATA"));
-        } else if (os.contains("mac")) {
-            baseDir = Paths.get(System.getProperty("user.home"), "Library", "Application Support");
-        } else {
-            baseDir = Paths.get(System.getProperty("user.home"), "." + appName);
-        }
-        return baseDir.resolve(appName);
-    }
+    private static final long STARTUP_DELAY_MS = 3000;
 
     private final MidiPlayer midiPlayer;
     private final PianoWindow pianoWindow;
@@ -73,17 +39,9 @@ public class PlaybackController {
     private final List<Integer> currentlyPressedNotes = new ArrayList<>();
     private final List<Integer> awaitedNotes = new ArrayList<>();
     private final Set<Integer> notesPressedInChordAttempt = new HashSet<>();
-    public PianoWindow getPianoWindow() {return this.pianoWindow;}
-
-    public List<Integer> getCurrentlyPressedNotes() {
-        return this.currentlyPressedNotes;
-    }
-
-    public Set<Integer> getNotesPressedInChordAttempt() {
-        return this.notesPressedInChordAttempt;
-    }
 
     public PlaybackController(MidiPlayer midiPlayer, PianoWindow pianoWindow) {
+        this.assignmentService = new HandAssignmentService(); // Instantiated here
         this.midiPlayer = midiPlayer;
         this.pianoWindow = pianoWindow;
         this.animationPanel = pianoWindow.getAnimationPanel();
@@ -197,7 +155,6 @@ public class PlaybackController {
         }
     }
 
-    //Event Handling Methods
     private void handleDragStart() {
         wasPlayingBeforeDrag = midiPlayer.isPlaying();
         if (wasPlayingBeforeDrag) {
@@ -295,47 +252,10 @@ public class PlaybackController {
             e.printStackTrace();
         }
     }
+
     private void handleSave() {
         if (!isEditingMode) return;
-        saveAssignments();
-    }
 
-    private static String computeSequenceHash(Sequence sequence) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
-            for (Track track : sequence.getTracks()) {
-                for (int i = 0; i < track.size(); i++) {
-                    MidiEvent ev = track.get(i);
-                    updateDigestWithLong(md, ev.getTick());
-                    MidiMessage msg = ev.getMessage();
-                    byte[] raw = msg.getMessage();
-                    md.update(raw, 0, msg.getLength());
-                }
-            }
-            byte[] digest = md.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-1 unavailable", e);
-        }
-    }
-
-    private static void updateDigestWithLong(MessageDigest md, long v) {
-        byte[] b = new byte[8];
-        for (int i = 7; i >= 0; i--) {
-            b[i] = (byte) (v & 0xFF);
-            v >>= 8;
-        }
-        md.update(b);
-    }
-
-    private Path getAssignmentFilePath(Sequence sequence) {
-        String hash = computeSequenceHash(sequence);
-        return ASSIGNMENTS_DIR.resolve(hash + ".json");
-    }
-
-    private void saveAssignments() {
         List<AnimationPanel.HandAssignment> items = animationPanel.getAssignedNotes();
         if (items.isEmpty()) {
             JOptionPane.showMessageDialog(pianoWindow, "No hand assignments to save.", "Nothing to save", JOptionPane.INFORMATION_MESSAGE);
@@ -343,75 +263,13 @@ public class PlaybackController {
         }
 
         Sequence seq = midiPlayer.getSequencer().getSequence();
-        String hash = computeSequenceHash(seq);
-        Path file = getAssignmentFilePath(seq);
+        boolean success = assignmentService.saveAssignments(seq, items);
 
-        HandAssignmentFile data = new HandAssignmentFile();
-        data.midiHash = hash;
-        data.assignments = items;
-
-        try {
-            Files.createDirectories(ASSIGNMENTS_DIR);
-            String json = gson.toJson(data); // Convert object to JSON string
-            Files.writeString(file, json, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            JOptionPane.showMessageDialog(pianoWindow, "Saved hand assignments to:\n" + file.toAbsolutePath(), "Saved", JOptionPane.INFORMATION_MESSAGE);
-        } catch (IOException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(pianoWindow, "Failed to save assignments:\n" + e.getMessage(), "Save error", JOptionPane.ERROR_MESSAGE);
+        if (success) {
+            JOptionPane.showMessageDialog(pianoWindow, "Saved hand assignments successfully.", "Saved", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(pianoWindow, "Failed to save assignments.", "Save Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private void loadAssignmentsIfPresent(Sequence sequence) {
-        Path file = getAssignmentFilePath(sequence);
-        if (!Files.exists(file)) {
-            return;
-        }
-        try {
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-            HandAssignmentFile data = gson.fromJson(content, HandAssignmentFile.class);
-
-            if (data != null && data.assignments != null) {
-                animationPanel.applyHandAssignments(data.assignments);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    public static boolean assignmentFileExistsFor(String midiFileName) {
-        try {
-            MidiFileService service = new MidiFileService();
-            MidiFileService.MidiData midiData = service.loadMidiData(midiFileName);
-            String hash = computeSequenceHash(midiData.sequence());
-            Path path = ASSIGNMENTS_DIR.resolve(hash + ".json");
-            return Files.exists(path);
-        } catch (Exception e) {
-            e.printStackTrace(); // log for debugging
-            return false;
-        }
-    }
-
-    private void onNoteOn(int midiNote) {
-        if (isPracticeMode || isEditingMode) {
-            return;
-        }
-        long playerTimeMillis = midiPlayer.getSequencer().getMicrosecondPosition() / 1000;
-        animationPanel.updatePlaybackTime(playerTimeMillis);
-        SwingUtilities.invokeLater(() -> pianoWindow.highlightNote(midiNote));
-    }
-
-    private void onNoteOff(int midiNote) {
-        if (isPracticeMode || isEditingMode) {
-            return;
-        }
-        SwingUtilities.invokeLater(() -> pianoWindow.releaseNote(midiNote));
-    }
-    private void resetPracticeState() {
-        synchronized (currentlyPressedNotes) {
-            currentlyPressedNotes.clear();
-        }
-        awaitedNotes.clear();
-        notesPressedInChordAttempt.clear();
-        SwingUtilities.invokeLater(pianoWindow::releaseAllKeys);
     }
 
     public void preprocessNotes(Sequence sequence) {
@@ -443,6 +301,46 @@ public class PlaybackController {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        loadAssignmentsIfPresent(sequence);
+
+        Optional<List<AnimationPanel.HandAssignment>> assignments = assignmentService.loadAssignments(sequence);
+        assignments.ifPresent(animationPanel::applyHandAssignments);
+    }
+
+
+    public PianoWindow getPianoWindow() {
+        return this.pianoWindow;
+    }
+
+    public List<Integer> getCurrentlyPressedNotes() {
+        return this.currentlyPressedNotes;
+    }
+
+    public Set<Integer> getNotesPressedInChordAttempt() {
+        return this.notesPressedInChordAttempt;
+    }
+
+    private void onNoteOn(int midiNote) {
+        if (isPracticeMode || isEditingMode) {
+            return;
+        }
+        long playerTimeMillis = midiPlayer.getSequencer().getMicrosecondPosition() / 1000;
+        animationPanel.updatePlaybackTime(playerTimeMillis);
+        SwingUtilities.invokeLater(() -> pianoWindow.highlightNote(midiNote));
+    }
+
+    private void onNoteOff(int midiNote) {
+        if (isPracticeMode || isEditingMode) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> pianoWindow.releaseNote(midiNote));
+    }
+
+    private void resetPracticeState() {
+        synchronized (currentlyPressedNotes) {
+            currentlyPressedNotes.clear();
+        }
+        awaitedNotes.clear();
+        notesPressedInChordAttempt.clear();
+        SwingUtilities.invokeLater(pianoWindow::releaseAllKeys);
     }
 }

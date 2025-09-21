@@ -1,6 +1,8 @@
 package com.Tbence132545.Melodigram.view;
 
 import com.Tbence132545.Melodigram.controller.PlaybackController;
+import com.Tbence132545.Melodigram.model.HandAssignmentService;
+import com.Tbence132545.Melodigram.model.MidiFileService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -163,7 +165,7 @@ public class ListWindow extends JFrame {
             practiceOptionsPanel.setOpaque(false);
 
             practiceButton.addActionListener(e -> {
-                boolean hasAssignments = PlaybackController.assignmentFileExistsFor(title);
+                boolean hasAssignments = HandAssignmentService.assignmentFileExistsFor(title);
                 if (hasAssignments) {
                     JButton left = createCardButton("Just Left Hand", ev -> listener.onPracticeClicked(title, MidiFileActionListener.HandMode.LEFT));
                     JButton right = createCardButton("Just Right Hand", ev -> listener.onPracticeClicked(title, MidiFileActionListener.HandMode.RIGHT));
