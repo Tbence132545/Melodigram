@@ -1,6 +1,7 @@
 package com.Tbence132545.Melodigram.controller;
 
 import com.Tbence132545.Melodigram.model.MidiFileService;
+import com.Tbence132545.Melodigram.model.MidiInputReceiver;
 import com.Tbence132545.Melodigram.model.MidiPlayer;
 import com.Tbence132545.Melodigram.view.AnimationPanel;
 import com.Tbence132545.Melodigram.view.ListWindow;
@@ -64,7 +65,7 @@ public class PlaybackController {
     private long lastTickTime;
     private boolean playbackStarted = false;
     private boolean animationPaused = false;
-    private boolean isPracticeMode = false;
+    public boolean isPracticeMode = false;
     private boolean isEditingMode= false;
     private boolean wasPlayingBeforeDrag = false;
     private ListWindow.MidiFileActionListener.HandMode practiceHandMode = ListWindow.MidiFileActionListener.HandMode.BOTH;
@@ -72,6 +73,15 @@ public class PlaybackController {
     private final List<Integer> currentlyPressedNotes = new ArrayList<>();
     private final List<Integer> awaitedNotes = new ArrayList<>();
     private final Set<Integer> notesPressedInChordAttempt = new HashSet<>();
+    public PianoWindow getPianoWindow() {return this.pianoWindow;}
+
+    public List<Integer> getCurrentlyPressedNotes() {
+        return this.currentlyPressedNotes;
+    }
+
+    public Set<Integer> getNotesPressedInChordAttempt() {
+        return this.notesPressedInChordAttempt;
+    }
 
     public PlaybackController(MidiPlayer midiPlayer, PianoWindow pianoWindow) {
         this.midiPlayer = midiPlayer;
@@ -280,7 +290,7 @@ public class PlaybackController {
             if (midiInputDevice != null && midiInputDevice.isOpen()) midiInputDevice.close();
             midiInputDevice = device;
             if (!device.isOpen()) device.open();
-            device.getTransmitter().setReceiver(new MidiInputReceiver());
+            device.getTransmitter().setReceiver(new MidiInputReceiver(this));
         } catch (MidiUnavailableException e) {
             e.printStackTrace();
         }
@@ -434,33 +444,5 @@ public class PlaybackController {
             e.printStackTrace();
         }
         loadAssignmentsIfPresent(sequence);
-    }
-
-
-    private class MidiInputReceiver implements Receiver {
-        @Override
-        public void send(MidiMessage message, long timeStamp) {
-            if (!isPracticeMode || !(message instanceof ShortMessage sm)) return;
-            int command = sm.getCommand();
-            int note = sm.getData1();
-            int velocity = sm.getData2();
-            if (command == ShortMessage.NOTE_ON && velocity > 0) {
-                synchronized (currentlyPressedNotes) {
-                    if (!currentlyPressedNotes.contains(note)) {
-                        currentlyPressedNotes.add(note);
-                        notesPressedInChordAttempt.add(note);
-                        SwingUtilities.invokeLater(() -> pianoWindow.highlightNote(note));
-                    }
-                }
-            } else if (command == ShortMessage.NOTE_OFF || (command == ShortMessage.NOTE_ON && velocity == 0)) {
-                synchronized (currentlyPressedNotes) {
-                    currentlyPressedNotes.remove((Integer) note);
-                    SwingUtilities.invokeLater(() -> pianoWindow.releaseNote(note));
-                }
-            }
-        }
-
-        @Override
-        public void close() {}
     }
 }
