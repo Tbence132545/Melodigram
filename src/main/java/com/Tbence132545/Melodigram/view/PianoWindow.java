@@ -52,8 +52,8 @@ public class PianoWindow extends JFrame {
 
         JPanel controlPanel = createControlPanel(this.playButton = new JButton("||"),
                 this.backButton = new JButton("←"),
-                this.backwardButton = new JButton("⏪"),
-                this.forwardButton = new JButton("⏩"),
+                this.backwardButton = new JButton("<<"),
+                this.forwardButton = new JButton(">>"),
                 this.saveButton = new JButton("Save"));
 
         this.pianoPanel = createPianoPanel();
@@ -299,7 +299,7 @@ public class PianoWindow extends JFrame {
 
 
     private void styleControlButton(JButton button, Dimension size, MouseAdapter hoverEffect) {
-        button.setPreferredSize(size);
+        button.setPreferredSize(null);
         button.setFont(CONTROL_BUTTON_FONT);
         button.setMargin(new Insets(0, 0, 0, 0));
         button.setBorderPainted(false);
