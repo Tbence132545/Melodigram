@@ -39,6 +39,7 @@ public class PlaybackController {
     private final List<Integer> currentlyPressedNotes = new ArrayList<>();
     private final List<Integer> awaitedNotes = new ArrayList<>();
     private final Set<Integer> notesPressedInChordAttempt = new HashSet<>();
+    private boolean isNotationOn = false;
 
     public PlaybackController(MidiPlayer midiPlayer, PianoWindow pianoWindow) {
         this.assignmentService = new HandAssignmentService(); // Instantiated here
@@ -68,12 +69,16 @@ public class PlaybackController {
         pianoWindow.setForwardButtonListener(e -> seekAndPreserveState(midiPlayer.getSequencer().getMicrosecondPosition() + 10_000_000));
         pianoWindow.setBackwardButtonListener(e -> seekAndPreserveState(midiPlayer.getSequencer().getMicrosecondPosition() - 10_000_000));
         pianoWindow.setSaveButtonListener(e -> handleSave());
+        pianoWindow.setToggleNotationListener( e -> handleToggleNotation());
         seekBar.setSeekListener(this::seekAndPreserveState);
         animationPanel.setOnDragStart(this::handleDragStart);
         animationPanel.setOnTimeChange(this::handleDragChange);
         animationPanel.setOnDragEnd(this::handleDragEnd);
     }
-
+    private void handleToggleNotation() {
+        isNotationOn = !isNotationOn;
+        animationPanel.setNotationEnabled(isNotationOn);
+    }
     private void onTimerTick() {
         long now = System.currentTimeMillis();
         long delta = now - lastTickTime;

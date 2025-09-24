@@ -1,4 +1,3 @@
-// java
 package com.Tbence132545.Melodigram.view;
 
 import javax.sound.midi.Sequencer;
@@ -150,7 +149,6 @@ public class SeekBar extends JComponent {
         int filledWidth = (int) (width * progress);
         g2.setColor(fg);
         g2.fillRoundRect(0, barY, filledWidth, barHeight, 4, 4);
-
 
         g2.setColor(thumb);
         g2.fillRect(filledWidth - 1, barY - (barHeight / 2), 2, barHeight * 2);
