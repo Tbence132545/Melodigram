@@ -26,7 +26,7 @@ public class AnimationPanel extends JPanel {
         }
     }
 
-
+    private static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     private static final double PIXELS_PER_MILLISECOND = 0.1;
     private static final long NOTE_FALL_DURATION_MS = 2000;
     private static final int NOTE_CORNER_RADIUS = 10;
@@ -48,6 +48,7 @@ public class AnimationPanel extends JPanel {
     private final int lowestNote;
     private final int highestNote;
     private boolean isHandAssignmentEnabled = false;
+    private boolean isNotationEnabled = false;
     private ListWindow.MidiFileActionListener.HandMode practiceFilterMode = ListWindow.MidiFileActionListener.HandMode.BOTH;
 
     private Runnable onDragStart;
@@ -73,7 +74,9 @@ public class AnimationPanel extends JPanel {
         this.practiceFilterMode = mode;
         repaint();
     }
-
+    public void setNotationEnabled(boolean enabled) {
+        this.isNotationEnabled = enabled;
+    }
     public List<HandAssignment> getAssignedNotes() {
         return notes.stream()
                 .filter(note -> note.hand != null)
@@ -146,7 +149,18 @@ public class AnimationPanel extends JPanel {
         }
         return onsets;
     }
+    public static String midiToNoteName(int midiNumber) {
+        if (midiNumber < 0 || midiNumber > 127) {
+            return "";
+        }
 
+        int noteIndex = midiNumber % 12;
+        int octave = (midiNumber / 12) - 1;
+
+        String noteName = NOTE_NAMES[noteIndex];
+
+        return noteName + octave;
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -302,9 +316,14 @@ public class AnimationPanel extends JPanel {
 
             if (topY < panelHeight && (topY + noteHeight) > 0) {
                 drawNoteBody(g, noteHeight);
+                String text = "";
                 if (isHandAssignmentEnabled && hand != null) {
-                    drawHandText(g);
+                    text= (hand == Hands.LEFT) ? "L" : "R";
                 }
+                if(isNotationEnabled) {
+                    text = midiToNoteName(midiNote);
+                }
+                drawHandText(g, text);
             }
         }
 
@@ -346,8 +365,7 @@ public class AnimationPanel extends JPanel {
             g.fillRoundRect(bounds.x, bounds.y, bounds.width, noteHeight, NOTE_CORNER_RADIUS, NOTE_CORNER_RADIUS);
         }
 
-        private void drawHandText(Graphics2D g) {
-            String text = (hand == Hands.LEFT) ? "L" : "R";
+        private void drawHandText(Graphics2D g, String text) {
             g.setFont(NOTE_TEXT_FONT);
             g.setColor(NOTE_TEXT_COLOR);
             FontMetrics fm = g.getFontMetrics();

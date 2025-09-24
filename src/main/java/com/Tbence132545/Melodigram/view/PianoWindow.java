@@ -1,4 +1,3 @@
-// java
 package com.Tbence132545.Melodigram.view;
 
 import javax.swing.*;
@@ -27,6 +26,7 @@ public class PianoWindow extends JFrame {
         }
     }
 
+    private final JPanel controlPanel; // Field for direct access
     private final JLayeredPane pianoPanel;
     private final AnimationPanel animationPanel;
     private final JButton playButton;
@@ -35,6 +35,7 @@ public class PianoWindow extends JFrame {
     private final JButton forwardButton;
     private final JButton saveButton;
     private SeekBar seekBar;
+    private final JButton toggleNotation;
 
     private final Map<Integer, JButton> noteToKeyButton = new HashMap<>();
     private final int lowestNote;
@@ -43,14 +44,18 @@ public class PianoWindow extends JFrame {
     private int blackKeyWidth = 30;
     private static final int WHITE_KEY_HEIGHT = 150;
     private static final int BLACK_KEY_HEIGHT = 100;
+    private boolean isNotationEnabled = false;
 
     public PianoWindow(int lowestNote, int highestNote) {
         this.lowestNote = Math.max(lowestNote, 0);
         this.highestNote = Math.min(highestNote, 127);
 
         initializeFrame();
+        this.toggleNotation = new JButton("Notation");
+        styleToggleNotation(toggleNotation);
 
-        JPanel controlPanel = createControlPanel(this.playButton = new JButton("||"),
+        // Initialize the controlPanel field
+        this.controlPanel = createControlPanel(this.playButton = new JButton("||"),
                 this.backButton = new JButton("←"),
                 this.backwardButton = new JButton("<<"),
                 this.forwardButton = new JButton(">>"),
@@ -75,6 +80,7 @@ public class PianoWindow extends JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         getContentPane().setBackground(new Color(230, 230, 230));
     }
+
     private JPanel createControlPanel(JButton play, JButton back, JButton backward, JButton forward, JButton save) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(COLOR_CONTROL_PANEL_BG);
@@ -93,7 +99,6 @@ public class PianoWindow extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
 
         gbc.gridx = 0;
-        gbc.gridheight = 2;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.VERTICAL;
         gbc.insets = new Insets(5, 5, 5, 5);
@@ -114,13 +119,17 @@ public class PianoWindow extends JFrame {
         gbc.fill = GridBagConstraints.VERTICAL;
         panel.add(centerButtonPanel, gbc);
 
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.add(save);
+        rightPanel.add(toggleNotation);
+
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
-        gbc.gridheight = 2;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.fill = GridBagConstraints.VERTICAL;
         gbc.insets = new Insets(5, 5, 5, 5);
-        panel.add(save, gbc);
+        panel.add(rightPanel, gbc);
 
         return panel;
     }
@@ -129,6 +138,41 @@ public class PianoWindow extends JFrame {
         JLayeredPane panel = new JLayeredPane();
         panel.setPreferredSize(new Dimension(800, WHITE_KEY_HEIGHT));
         return panel;
+    }
+
+    private void styleToggleNotation(JButton notationButton) {
+        notationButton.setFont(CONTROL_BUTTON_FONT.deriveFont(14f));
+        notationButton.setFocusPainted(false);
+        notationButton.setBorderPainted(false);
+        notationButton.setOpaque(true);
+        notationButton.setForeground(Color.WHITE);
+
+        notationButton.setBackground(isNotationEnabled ? new Color(255, 100, 100, 180) : COLOR_CONTROL_BUTTON_BG);
+
+        notationButton.addActionListener(e -> {
+            isNotationEnabled = !isNotationEnabled;
+            if (isNotationEnabled) {
+                notationButton.setBackground(new Color(255, 100, 100, 180));
+            } else {
+                notationButton.setBackground(COLOR_CONTROL_BUTTON_BG);
+            }
+        });
+
+        // Hover effect
+        notationButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!isNotationEnabled) {
+                    notationButton.setBackground(COLOR_CONTROL_BUTTON_HOVER);
+                }
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!isNotationEnabled) {
+                    notationButton.setBackground(COLOR_CONTROL_BUTTON_BG);
+                }
+            }
+        });
     }
 
     private JPanel createPianoWithLinePanel() {
@@ -150,6 +194,9 @@ public class PianoWindow extends JFrame {
         });
     }
 
+    public void setToggleNotationListener(ActionListener listener) {
+        toggleNotation.addActionListener(listener);
+    }
 
     private void updatePianoKeys() {
         pianoPanel.removeAll();
@@ -161,7 +208,6 @@ public class PianoWindow extends JFrame {
         int panelWidth = pianoPanel.getWidth() > 0 ? pianoPanel.getWidth() : getWidth();
         whiteKeyWidth = panelWidth / whiteKeyCount;
         blackKeyWidth = (int) (whiteKeyWidth * 0.6);
-        //I'm drawing the middle C notes' notation based on the range
         int middleCNote = findMiddleCNote();
 
         int whiteKeyIndex = 0;
@@ -170,7 +216,7 @@ public class PianoWindow extends JFrame {
             JButton keyButton = createKeyButton(keyType);
 
             if (keyType == KeyType.WHITE) {
-                addWhiteKey(keyButton, whiteKeyIndex, i == middleCNote,i);
+                addWhiteKey(keyButton, whiteKeyIndex, i == middleCNote, i);
                 whiteKeyIndex++;
             } else {
                 addBlackKey(keyButton, whiteKeyIndex);
@@ -231,7 +277,6 @@ public class PianoWindow extends JFrame {
         pianoPanel.add(keyButton, JLayeredPane.PALETTE_LAYER);
     }
 
-
     public void highlightNote(int midiNote) {
         setKeyColor(midiNote, true);
     }
@@ -248,18 +293,22 @@ public class PianoWindow extends JFrame {
     public void addSeekBar(JComponent seekBarComponent) {
         this.seekBar = (SeekBar) seekBarComponent;
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 1;
+
+        gbc.gridx = 0;
+        gbc.gridwidth = 3;
         gbc.gridy = 1;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(0, 5, 5, 5);
-        // Add to the control panel, not the frame
-        ((JPanel)getContentPane().getComponent(0)).add(seekBarComponent, gbc);
+
+        this.controlPanel.add(seekBarComponent, gbc);
     }
-    public void setEditingMode(boolean isEditing){
+
+    public void setEditingMode(boolean isEditing) {
         saveButton.setVisible(isEditing);
     }
+
     public void disableButtons(boolean shouldDisable) {
         playButton.setEnabled(!shouldDisable);
         backwardButton.setEnabled(!shouldDisable);
@@ -278,7 +327,8 @@ public class PianoWindow extends JFrame {
         return animationPanel;
     }
 
-    public record KeyInfo(boolean isBlack, int x, int width) {}
+    public record KeyInfo(boolean isBlack, int x, int width) {
+    }
 
     public KeyInfo getKeyInfo(int midiNote) {
         JButton key = noteToKeyButton.get(midiNote);
@@ -291,12 +341,25 @@ public class PianoWindow extends JFrame {
         return KeyType.fromMidiNote(midiNote) == KeyType.BLACK;
     }
 
-    public void setPlayButtonListener(ActionListener listener) { playButton.addActionListener(listener); }
-    public void setBackButtonListener(ActionListener listener) { backButton.addActionListener(listener); }
-    public void setBackwardButtonListener(ActionListener listener) { backwardButton.addActionListener(listener); }
-    public void setForwardButtonListener(ActionListener listener) { forwardButton.addActionListener(listener); }
-    public void setSaveButtonListener(ActionListener listener) { saveButton.addActionListener(listener); }
+    public void setPlayButtonListener(ActionListener listener) {
+        playButton.addActionListener(listener);
+    }
 
+    public void setBackButtonListener(ActionListener listener) {
+        backButton.addActionListener(listener);
+    }
+
+    public void setBackwardButtonListener(ActionListener listener) {
+        backwardButton.addActionListener(listener);
+    }
+
+    public void setForwardButtonListener(ActionListener listener) {
+        forwardButton.addActionListener(listener);
+    }
+
+    public void setSaveButtonListener(ActionListener listener) {
+        saveButton.addActionListener(listener);
+    }
 
     private void styleControlButton(JButton button, Dimension size, MouseAdapter hoverEffect) {
         button.setPreferredSize(null);
@@ -333,22 +396,18 @@ public class PianoWindow extends JFrame {
         return keyButton;
     }
 
-
     private void setKeyColor(int midiNote, boolean isHighlighted) {
         JButton key = noteToKeyButton.get(midiNote);
         if (key == null) return;
 
         KeyType keyType = KeyType.fromMidiNote(midiNote);
         if (isHighlighted) {
-
             Color assignedColor = animationPanel.getAssignedHighlightColor(midiNote);
-
             if (assignedColor != null) {
                 key.setBackground(assignedColor);
             } else {
                 key.setBackground(keyType == KeyType.WHITE ? COLOR_WHITE_KEY_HIGHLIGHT : COLOR_BLACK_KEY_HIGHLIGHT);
             }
-
         } else {
             key.setBackground(keyType == KeyType.WHITE ? Color.WHITE : Color.BLACK);
         }
