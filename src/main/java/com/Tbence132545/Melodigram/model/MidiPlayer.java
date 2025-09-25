@@ -16,6 +16,24 @@ public class MidiPlayer {
             sequencer.open();
             Synthesizer synth = MidiSystem.getSynthesizer();
             synth.open();
+            try {
+                java.net.URL sf2Url = getClass().getClassLoader().getResource("soundfonts/steinway.sf2");
+                if (sf2Url == null) {
+                    throw new FileNotFoundException("SoundFont not found in resources: soundfonts/soundfont1.sf2");
+                }
+
+                Soundbank sb = MidiSystem.getSoundbank(sf2Url);
+                if (synth.isSoundbankSupported(sb)) {
+                    synth.unloadAllInstruments(synth.getDefaultSoundbank());
+                    synth.loadAllInstruments(sb);
+                    synth.getChannels()[0].programChange(0);
+                } else {
+                    System.out.println("Soundbank not supported: " + sf2Url);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Falling back to default soundbank.");
+            }
 
             Transmitter transmitter = sequencer.getTransmitter();
             Receiver synthReceiver = synth.getReceiver();

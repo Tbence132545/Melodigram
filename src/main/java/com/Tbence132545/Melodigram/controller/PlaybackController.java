@@ -211,12 +211,12 @@ public class PlaybackController {
             if (midiPlayer.isPlaying()) {
                 midiPlayer.stop();
                 animationPaused = true;
-                pianoWindow.setPlayButtonText("▶");
+                pianoWindow.setPlayButtonIcon(false);
             } else {
                 midiPlayer.play();
                 animationPaused = false;
                 lastTickTime = System.currentTimeMillis();
-                pianoWindow.setPlayButtonText("||");
+                pianoWindow.setPlayButtonIcon(true);
             }
         }
     }
@@ -231,7 +231,7 @@ public class PlaybackController {
                 midiPlayer.stop();
             }
             animationPaused = true;
-            pianoWindow.setPlayButtonText("▶");
+            pianoWindow.setPlayButtonIcon(false);
             updateSequencerPosition(0);
             pianoWindow.repaint();
         }
