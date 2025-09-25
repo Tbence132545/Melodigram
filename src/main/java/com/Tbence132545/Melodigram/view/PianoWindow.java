@@ -17,6 +17,11 @@ public class PianoWindow extends JFrame {
     private static final Color COLOR_CONTROL_BUTTON_HOVER = new Color(80, 80, 80);
     private static final Color COLOR_WHITE_KEY_HIGHLIGHT = new Color(255, 200, 100);
     private static final Color COLOR_BLACK_KEY_HIGHLIGHT = Color.RED;
+    private final ImageIcon playIcon = loadIcon("play.png", 25);
+    private final ImageIcon pauseIcon = loadIcon("pause.png", 25);
+    private final ImageIcon backIcon = loadIcon("back.png", 25);
+    private final ImageIcon backwardIcon = loadIcon("backward.png", 25);
+    private final ImageIcon forwardIcon = loadIcon("forward.png", 25);
 
     private enum KeyType {
         WHITE, BLACK;
@@ -54,12 +59,15 @@ public class PianoWindow extends JFrame {
         this.toggleNotation = new JButton("Notation");
         styleToggleNotation(toggleNotation);
 
-        // Initialize the controlPanel field
-        this.controlPanel = createControlPanel(this.playButton = new JButton("||"),
-                this.backButton = new JButton("←"),
-                this.backwardButton = new JButton("<<"),
-                this.forwardButton = new JButton(">>"),
-                this.saveButton = new JButton("Save"));
+       this.controlPanel = createControlPanel(
+               this.playButton = new JButton(pauseIcon),
+               this.backButton = new JButton(backIcon),
+               this.backwardButton = new JButton(backwardIcon),
+               this.forwardButton = new JButton(forwardIcon),
+               this.saveButton = new JButton("Save")
+       );
+
+
 
         this.pianoPanel = createPianoPanel();
         this.animationPanel = new AnimationPanel(this::getKeyInfo, this.lowestNote, this.highestNote);
@@ -92,7 +100,6 @@ public class PianoWindow extends JFrame {
         styleControlButton(backward, buttonSize, hoverEffect);
         styleControlButton(play, buttonSize, hoverEffect);
         styleControlButton(forward, buttonSize, hoverEffect);
-
         styleControlButton(save, new Dimension(80, 50), hoverEffect);
         save.setVisible(false);
 
@@ -104,19 +111,17 @@ public class PianoWindow extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         panel.add(back, gbc);
 
-        JPanel centerButtonPanel = new JPanel(new GridBagLayout());
+        JPanel centerButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0)); // centered, no extra gap
         centerButtonPanel.setOpaque(false);
-        GridBagConstraints cbc = new GridBagConstraints();
-        cbc.fill = GridBagConstraints.VERTICAL;
-        centerButtonPanel.add(backward, cbc);
-        centerButtonPanel.add(play, cbc);
-        centerButtonPanel.add(forward, cbc);
+        centerButtonPanel.add(backward);
+        centerButtonPanel.add(play);
+        centerButtonPanel.add(forward);
 
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.fill = GridBagConstraints.VERTICAL;
+        gbc.fill = GridBagConstraints.NONE;
         panel.add(centerButtonPanel, gbc);
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -158,7 +163,6 @@ public class PianoWindow extends JFrame {
             }
         });
 
-        // Hover effect
         notationButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -192,6 +196,15 @@ public class PianoWindow extends JFrame {
                 updatePianoKeys();
             }
         });
+    }
+    private ImageIcon loadIcon(String path, int size) {
+        java.net.URL url = getClass().getResource("/images/" + path);
+        if (url == null) {
+            throw new IllegalArgumentException("Icon not found: " + path);
+        }
+        Image img = new ImageIcon(url).getImage();
+        Image scaled = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 
     public void setToggleNotationListener(ActionListener listener) {
@@ -319,8 +332,8 @@ public class PianoWindow extends JFrame {
         }
     }
 
-    public void setPlayButtonText(String text) {
-        playButton.setText(text);
+    public void setPlayButtonIcon(boolean isPlaying) {
+        playButton.setIcon(isPlaying ? pauseIcon : playIcon);
     }
 
     public AnimationPanel getAnimationPanel() {
@@ -362,7 +375,10 @@ public class PianoWindow extends JFrame {
     }
 
     private void styleControlButton(JButton button, Dimension size, MouseAdapter hoverEffect) {
-        button.setPreferredSize(null);
+        button.setPreferredSize(size);
+        button.setMinimumSize(size);
+        button.setMaximumSize(size);
+
         button.setFont(CONTROL_BUTTON_FONT);
         button.setMargin(new Insets(0, 0, 0, 0));
         button.setBorderPainted(false);
@@ -372,6 +388,7 @@ public class PianoWindow extends JFrame {
         button.setBackground(COLOR_CONTROL_BUTTON_BG);
         button.addMouseListener(hoverEffect);
     }
+
 
     private MouseAdapter createHoverEffect() {
         return new MouseAdapter() {
