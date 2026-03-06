@@ -7,7 +7,7 @@ Watch musical pieces come to life with an animated piano display — or connect 
 
 ---
 
-## 🎥 Demo
+## Demo
 
 ![demogif2](https://github.com/user-attachments/assets/78767fd0-896c-4d78-8ce3-84d4993e78b8)
 
