@@ -22,11 +22,22 @@ Unlike most Synthesia-like applications, which are typically built with game eng
 
 The goal was to challenge myself and explore how far a traditional GUI framework can be pushed outside its intended scope.
 
+The notation is drawn with Java2D rather than pulled in from a scoring library, in keeping with
+that goal. Spacing on the staff is proportional to time instead of engraved, so the sheet stays
+locked to playback and to the falling notes beside it.
+
 ## Features
 
 - **MIDI Playback** – Load and play any standard `.mid` file  
 - **Real-time Visualization** – Notes light up on a virtual piano as they are played  
 - **Waterfall Animation** – Animated falling notes for easier practice  
+- **Sheet Music** – A scrolling grand staff rendered from the MIDI, with each note lighting up as
+  it sounds. Switch between the falling notes, the sheet music, or both at once with the
+  **Notes / Sheet / Both** buttons. The key signature is taken from the file (or inferred from the
+  notes when the file does not declare one), so pitches are spelled with the right sharps or flats
+  and only genuine accidentals are printed on the notes themselves
+- **Playback Speed** – Slow a piece down to 0.25× (or push it to 2×) while practising, without
+  changing its pitch
 - **Live MIDI Input** – Connect your own MIDI keyboard/controller to learn interactively  
 - **Playback Controls** – Functional seek bar with full playback control
 - **Dragging** - You can drag the animation up and down to traverse the visualization
@@ -54,8 +65,12 @@ If you want to build the project yourself, follow these steps.
 
 ### Prerequisites
 
-* JDK 23 or newer.
+* A JDK for building. JDK 21–23 is recommended: the project targets Java 21 bytecode, and the
+  bundled Gradle 8.10 wrapper cannot run on JDK 24 or newer. Upgrade the wrapper first if you
+  only have a newer JDK installed.
 * Git.
+
+The released jar itself runs on any JDK 21 or newer.
 
 ### Installation
 
@@ -76,7 +91,11 @@ If you want to build the project yourself, follow these steps.
         ```sh
         ./gradlew build
         ```
-4.  **Package the application:**
+4.  **Run the tests:**
+    ```sh
+    ./gradlew test
+    ```
+5.  **Package the application:**
     After building, you can create the runnable application using the `jpackage` command:
     ```cmd
     jpackage --type app-image --name "Melodigram" --input "build/libs" --main-jar "Melodigram.jar" --main-class "com.Tbence132545.Melodigram.Main" --dest "release"
