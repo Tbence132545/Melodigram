@@ -1,8 +1,6 @@
 package com.Tbence132545.Melodigram.view;
 
-import com.Tbence132545.Melodigram.controller.PlaybackController;
 import com.Tbence132545.Melodigram.model.HandAssignmentService;
-import com.Tbence132545.Melodigram.model.MidiFileService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -22,72 +20,45 @@ public class ListWindow extends JFrame {
     private JButton importButton;
 
     public ListWindow() {
-        setTitle("Choose a MIDI File");
+        setTitle("Melodigram");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+        getContentPane().setBackground(Theme.BACKGROUND);
 
         JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
-        mainPanel.setBackground(Color.BLACK);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(28, 32, 28, 32));
+        mainPanel.setBackground(Theme.BACKGROUND);
 
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(Color.BLACK);
+        topPanel.setBackground(Theme.BACKGROUND);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
 
-        JLabel label = new JLabel("Select a MIDI File:");
-        label.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        label.setForeground(Color.WHITE);
+        JLabel label = new JLabel("Select a piece");
+        label.setFont(Theme.font(Font.BOLD, 26));
+        label.setForeground(Theme.TEXT_PRIMARY);
         topPanel.add(label, BorderLayout.WEST);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(Color.BLACK);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(Theme.BACKGROUND);
 
-        importButton = createModernButton("Import MIDI");
-        backButton = createModernButton("<- Back to Main Menu");
+        importButton = Theme.createAccentButton("Import MIDI", new Dimension(170, 44));
+        backButton = Theme.createAccentButton("Back to Menu", new Dimension(180, 44));
         buttonPanel.add(importButton);
         buttonPanel.add(backButton);
         topPanel.add(buttonPanel, BorderLayout.EAST);
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
-        // Scrollable content
         contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(Color.BLACK);
+        contentPanel.setBackground(Theme.BACKGROUND);
 
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(Color.BLACK);
+        scrollPane.getViewport().setBackground(Theme.BACKGROUND);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
         add(mainPanel);
-    }
-
-    private JButton createModernButton(String text) {
-        JButton button = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color baseColor = new Color(200, 60, 60);
-                Color hoverColor = new Color(170, 40, 40);
-                g2.setColor(getModel().isRollover() ? hoverColor : baseColor);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-
-                g2.setColor(Color.WHITE);
-                FontMetrics fm = g2.getFontMetrics();
-                int textX = (getWidth() - fm.stringWidth(getText())) / 2;
-                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(getText(), textX, textY);
-                g2.dispose();
-            }
-        };
-        button.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        button.setFocusPainted(false);
-        button.setContentAreaFilled(false);
-        button.setBorderPainted(false);
-        button.setOpaque(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(200, 45));
-        return button;
     }
 
     public void setImportButtonListener(ActionListener listener) {
@@ -105,8 +76,10 @@ public class ListWindow extends JFrame {
                 contentPanel.add(new CollapsiblePanel(name, listener));
             }
         } else {
-            JLabel emptyLabel = new JLabel("No MIDI files found or error loading folder.");
-            emptyLabel.setForeground(Color.WHITE);
+            JLabel emptyLabel = new JLabel("No MIDI files found. Use “Import MIDI” to add one.");
+            emptyLabel.setFont(Theme.font(Font.PLAIN, 16));
+            emptyLabel.setForeground(Theme.TEXT_MUTED);
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             contentPanel.add(emptyLabel);
         }
         contentPanel.add(Box.createVerticalGlue());
@@ -125,25 +98,10 @@ public class ListWindow extends JFrame {
         public CollapsiblePanel(String title, MidiFileActionListener listener) {
             super(new BorderLayout());
             setAlignmentX(Component.LEFT_ALIGNMENT);
-            setBackground(Color.BLACK);
+            setBackground(Theme.BACKGROUND);
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
 
-            // Title button
-            titleButton = new JButton(title);
-            titleButton.setHorizontalAlignment(SwingConstants.LEFT);
-            titleButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            titleButton.setFocusPainted(false);
-            titleButton.setContentAreaFilled(false);
-            titleButton.setOpaque(true);
-            titleButton.setBackground(new Color(40, 40, 40));
-            titleButton.setForeground(Color.WHITE);
-            titleButton.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-            titleButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            titleButton.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseEntered(java.awt.event.MouseEvent evt) { titleButton.setBackground(new Color(200, 60, 60)); }
-                @Override
-                public void mouseExited(java.awt.event.MouseEvent evt) { titleButton.setBackground(new Color(40, 40, 40)); }
-            });
+            titleButton = createTitleButton(title);
 
             cardLayout = new CardLayout();
             cardsPanel = new JPanel(cardLayout);
@@ -153,9 +111,9 @@ public class ListWindow extends JFrame {
             JPanel mainActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
             mainActionsPanel.setOpaque(false);
 
-            JButton listenButton = createCardButton("Listen and watch", e -> listener.onWatchAndListenClicked("midi/" + title));
+            JButton listenButton = createCardButton("Listen and watch", e -> listener.onWatchAndListenClicked(title));
             JButton practiceButton = createCardButton("Practice", null); // listener added below
-            JButton assignHandsButton = createCardButton("Assign Hands", e -> listener.onAssignHandsClicked("midi/" + title));
+            JButton assignHandsButton = createCardButton("Assign Hands", e -> listener.onAssignHandsClicked(title));
 
             mainActionsPanel.add(listenButton);
             mainActionsPanel.add(practiceButton);
@@ -195,21 +153,45 @@ public class ListWindow extends JFrame {
             updatePanelHeight();
         }
 
-        private JButton createCardButton(String text, ActionListener listener) {
-            JButton button = new JButton(text);
+        /** A full-width row that expands to reveal the actions for its piece. */
+        private JButton createTitleButton(String title) {
+            JButton button = new JButton(title) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    boolean open = cardsPanel != null && cardsPanel.isVisible();
+                    Color background = getModel().isRollover() ? Theme.SURFACE_HOVER
+                            : (open ? Theme.SURFACE_RAISED : Theme.SURFACE);
+                    g2.setColor(background);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), Theme.CONTROL_RADIUS, Theme.CONTROL_RADIUS);
+                    if (open) {
+                        g2.setColor(Theme.ACCENT);
+                        g2.fillRoundRect(0, 0, 4, getHeight(), 4, 4);
+                    }
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            button.setHorizontalAlignment(SwingConstants.LEFT);
+            button.setFont(Theme.font(Font.BOLD, 16));
+            button.setForeground(Theme.TEXT_PRIMARY);
             button.setFocusPainted(false);
             button.setContentAreaFilled(false);
-            button.setOpaque(true);
-            button.setBackground(new Color(180, 40, 40));
-            button.setForeground(Color.WHITE);
-            button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            button.setBorderPainted(false);
+            button.setOpaque(false);
+            button.setBorder(BorderFactory.createEmptyBorder(14, 18, 14, 18));
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            return button;
+        }
+
+        /** Neutral rather than accent: these are peer actions, and a page of red buttons
+         *  leaves nothing to mark the primary ones in the header. */
+        private JButton createCardButton(String text, ActionListener listener) {
+            JButton button = Theme.createControlButton(text, null,
+                    new Dimension(Math.max(140, text.length() * 11), 40));
+            button.setFont(Theme.font(Font.PLAIN, 14));
             if (listener != null) button.addActionListener(listener);
-            button.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override public void mouseEntered(java.awt.event.MouseEvent evt) { button.setBackground(new Color(220, 60, 60)); }
-                @Override public void mouseExited(java.awt.event.MouseEvent evt) { button.setBackground(new Color(180, 40, 40)); }
-            });
             return button;
         }
 
