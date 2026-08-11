@@ -1,8 +1,10 @@
 // java
 package com.Tbence132545.Melodigram.model;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,23 +43,34 @@ public class MidiFileService {
     }
 
 
+    /**
+     * Opens a player already loaded with the named file. The caller owns the returned player
+     * and must close it. Use {@link #loadSequence} instead when only the notes are needed:
+     * constructing a player also opens a synthesizer and loads the soundfont.
+     */
     public MidiData loadMidiData(String midiFileName) throws Exception {
+        Sequence sequence = loadSequence(midiFileName);
         MidiPlayer midiPlayer = new MidiPlayer();
-        Sequence sequence;
-
-        Path externalFile = externalMidiDir.resolve(midiFileName);
-        if (Files.exists(externalFile)) {
-            midiPlayer.loadMidiFromFile(externalFile.toAbsolutePath().toString());
-            sequence = MidiSystem.getSequence(externalFile.toFile());
-        } else {
-            String resourcePath = INTERNAL_MIDI_DIR + midiFileName;
-            midiPlayer.loadMidiFromResources(resourcePath);
-            try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
-                if (is == null) throw new FileNotFoundException("Cannot find resource: " + resourcePath);
-                sequence = MidiSystem.getSequence(is);
-            }
+        try {
+            midiPlayer.setSequence(sequence);
+        } catch (Exception e) {
+            midiPlayer.close();
+            throw e;
         }
         return new MidiData(midiPlayer, sequence);
+    }
+
+    /** Reads a MIDI file, preferring a user-imported copy over the bundled resource. */
+    public Sequence loadSequence(String midiFileName) throws IOException, InvalidMidiDataException {
+        Path externalFile = externalMidiDir.resolve(midiFileName);
+        if (Files.exists(externalFile)) {
+            return MidiSystem.getSequence(externalFile.toFile());
+        }
+        String resourcePath = INTERNAL_MIDI_DIR + midiFileName;
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is == null) throw new FileNotFoundException("Cannot find resource: " + resourcePath);
+            return MidiSystem.getSequence(new BufferedInputStream(is));
+        }
     }
 
     public List<String> getAllMidiFileNames() {

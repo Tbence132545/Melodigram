@@ -12,8 +12,7 @@ import java.util.function.Consumer;
 public class MidiInputSelector extends JDialog {
     private final JComboBox<String> deviceComboBox;
     private final List<MidiDevice.Info> inputDevices = new ArrayList<>();
-    private final Consumer<MidiDevice.Info> onDeviceSelected;  // callback
-    private boolean confirmed = false;
+    private final Consumer<MidiDevice.Info> onDeviceSelected;
 
     public MidiInputSelector(JFrame parent, Consumer<MidiDevice.Info> onDeviceSelected) {
         super(parent, "Select MIDI Input Device", true);
@@ -33,22 +32,18 @@ public class MidiInputSelector extends JDialog {
         okBtn.addActionListener(e -> {
             int index = deviceComboBox.getSelectedIndex();
             if (index >= 0 && index < inputDevices.size()) {
-                MidiDevice.Info selectedDevice = inputDevices.get(index);
-                confirmed = true;
-                // Invoke callback with selected device info
-                if (onDeviceSelected != null) {
-                    onDeviceSelected.accept(selectedDevice);
-                }
+                // Hide before invoking the callback: it opens the piano window, and a modal
+                // dialog still on screen would block that window from being interacted with.
                 setVisible(false);
+                if (onDeviceSelected != null) {
+                    onDeviceSelected.accept(inputDevices.get(index));
+                }
             }
         });
         add(okBtn);
 
         JButton cancelBtn = new JButton("Cancel");
-        cancelBtn.addActionListener(e -> {
-            confirmed = false;
-            setVisible(false);
-        });
+        cancelBtn.addActionListener(e -> setVisible(false));
         add(cancelBtn);
     }
     private void loadMidiInputDevices() {
@@ -66,14 +61,5 @@ public class MidiInputSelector extends JDialog {
             deviceComboBox.addItem("No MIDI input devices found");
             deviceComboBox.setEnabled(false);
         }
-    }
-    public MidiDevice.Info getSelectedDevice() {
-        if (confirmed) {
-            int index = deviceComboBox.getSelectedIndex();
-            if (index >= 0 && index < inputDevices.size()) {
-                return inputDevices.get(index);
-            }
-        }
-        return null;
     }
 }

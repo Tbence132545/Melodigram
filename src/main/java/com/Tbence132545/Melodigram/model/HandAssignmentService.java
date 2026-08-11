@@ -4,6 +4,7 @@ package com.Tbence132545.Melodigram.model;
 import com.Tbence132545.Melodigram.view.AnimationPanel;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
@@ -13,7 +14,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,11 +22,12 @@ import java.util.Optional;
 
 public class HandAssignmentService {
 
+    private static final Path ASSIGNMENTS_DIR = AppPaths.assignmentsDirectory();
+
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path ASSIGNMENTS_DIR = getStandardApplicationDataDirectory().resolve("assignments");
 
     public Optional<List<AnimationPanel.HandAssignment>> loadAssignments(Sequence sequence) {
-        Path file = getAssignmentFilePath(sequence);
+        Path file = assignmentFilePath(computeSequenceHash(sequence));
         if (!Files.exists(file)) {
             return Optional.empty();
         }
@@ -36,47 +37,38 @@ public class HandAssignmentService {
             return (data != null && data.getAssignment() != null)
                     ? Optional.of(data.getAssignment())
                     : Optional.empty();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | JsonParseException e) {
+            System.err.println("Could not read hand assignments from " + file + ": " + e.getMessage());
             return Optional.empty();
         }
     }
 
     public boolean saveAssignments(Sequence sequence, List<AnimationPanel.HandAssignment> assignments) {
         String hash = computeSequenceHash(sequence);
-        Path file = getAssignmentFilePath(hash);
         HandAssignmentFile data = new HandAssignmentFile(hash, assignments);
         try {
             Files.createDirectories(ASSIGNMENTS_DIR);
-            String json = gson.toJson(data);
-            Files.writeString(file, json, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(assignmentFilePath(hash), gson.toJson(data), StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not save hand assignments: " + e.getMessage());
             return false;
         }
     }
 
     public static boolean assignmentFileExistsFor(String midiFileName) {
         try {
-            MidiFileService service = new MidiFileService();
-            MidiFileService.MidiData midiData = service.loadMidiData(midiFileName);
-            String hash = computeSequenceHash(midiData.sequence());
-            Path path = ASSIGNMENTS_DIR.resolve(hash + ".json");
-            return Files.exists(path);
+            Sequence sequence = new MidiFileService().loadSequence(midiFileName);
+            return Files.exists(assignmentFilePath(computeSequenceHash(sequence)));
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Could not look up hand assignments for " + midiFileName + ": " + e.getMessage());
             return false;
         }
     }
 
-    private Path getAssignmentFilePath(Sequence sequence) {
-        String hash = computeSequenceHash(sequence);
-        return ASSIGNMENTS_DIR.resolve(hash + ".json");
-    }
-
-    private Path getAssignmentFilePath(String hash) {
-        return ASSIGNMENTS_DIR.resolve(hash + ".json");
+    private static Path assignmentFilePath(String sequenceHash) {
+        return ASSIGNMENTS_DIR.resolve(sequenceHash + ".json");
     }
 
     private static String computeSequenceHash(Sequence sequence) {
@@ -108,17 +100,4 @@ public class HandAssignmentService {
         md.update(b);
     }
 
-    private static Path getStandardApplicationDataDirectory() {
-        String appName = "Melodigram";
-        String os = System.getProperty("os.name").toLowerCase();
-        Path baseDir;
-        if (os.contains("win")) {
-            baseDir = Paths.get(System.getenv("APPDATA"));
-        } else if (os.contains("mac")) {
-            baseDir = Paths.get(System.getProperty("user.home"), "Library", "Application Support");
-        } else {
-            baseDir = Paths.get(System.getProperty("user.home"), "." + appName);
-        }
-        return baseDir.resolve(appName);
-    }
 }
